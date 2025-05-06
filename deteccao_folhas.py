@@ -1,22 +1,51 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
-# Carregar a imagem
-img = cv2.imread('img_folha_1.jpg')
-hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+# Carregamento da imagem da folha
+folha = cv2.imread('folhas/img_folha_1.JPG')
 
-# Máscaras para folhas saudáveis (verde) e danificadas (marrom/amarelo)
-saudavel = cv2.inRange(hsv, (36, 40, 40), (85, 255, 255))
-danificada = cv2.inRange(hsv, (10, 100, 20), (25, 255, 255))
+# Conversão para RGB para exibição e HSV para segmentação
+folha_rgb = cv2.cvtColor(folha, cv2.COLOR_BGR2RGB)
+folha_hsv = cv2.cvtColor(folha, cv2.COLOR_BGR2HSV)
 
-# Operações morfológicas para refinar
-kernel = np.ones((5, 5), np.uint8)
-saudavel = cv2.morphologyEx(saudavel, cv2.MORPH_OPEN, kernel)
-danificada = cv2.morphologyEx(danificada, cv2.MORPH_OPEN, kernel)
+# Definição de faixas de cor no HSV para folhas saudáveis e danificadas
+limite_verde_inf = np.array([30, 40, 40])
+limite_verde_sup = np.array([90, 255, 255])
 
-# Criar imagem de saída colorida
-resultado = img.copy()
-resultado[saudavel > 0] = [0, 255, 0]     # Verde para saudável
-resultado[danificada > 0] = [0, 0, 255]   # Vermelho para danificada
+limite_danif_inf = np.array([10, 30, 30])
+limite_danif_sup = np.array([30, 255, 255])
 
-cv2.imwrite('resultado_folha.jpg', resultado)
+# Criação das máscaras binárias
+mascara_saudavel = cv2.inRange(folha_hsv, limite_verde_inf, limite_verde_sup)
+mascara_danificada = cv2.inRange(folha_hsv, limite_danif_inf, limite_danif_sup)
+
+# Redução de ruídos nas máscaras com abertura morfológica
+estrutura = np.ones((3, 3), np.uint8)
+mascara_saudavel = cv2.morphologyEx(mascara_saudavel, cv2.MORPH_OPEN, estrutura)
+mascara_danificada = cv2.morphologyEx(mascara_danificada, cv2.MORPH_OPEN, estrutura)
+
+# Aplicação das máscaras nas regiões da imagem original
+folha_saudavel = cv2.bitwise_and(folha_rgb, folha_rgb, mask=mascara_saudavel)
+folha_danificada = cv2.bitwise_and(folha_rgb, folha_rgb, mask=mascara_danificada)
+
+# Visualização dos resultados
+plt.figure(figsize=(10, 5))
+
+plt.subplot(1, 3, 1)
+plt.imshow(folha_rgb)
+plt.title("Imagem Original")
+plt.axis('off')
+
+plt.subplot(1, 3, 2)
+plt.imshow(folha_saudavel)
+plt.title("Região Saudável")
+plt.axis('off')
+
+plt.subplot(1, 3, 3)
+plt.imshow(folha_danificada)
+plt.title("Região Danificada")
+plt.axis('off')
+
+plt.tight_layout()
+plt.show()
