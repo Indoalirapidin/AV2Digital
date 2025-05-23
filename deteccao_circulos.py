@@ -1,19 +1,48 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 
-# Carregar e pré-processar a imagem
-img = cv2.imread('circulos_1.png')
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-gray = cv2.GaussianBlur(gray, (9, 9), 2)
+# Carrega a imagem contendo círculos
+imagem = cv2.imread('circulos/circulos_1.png')
+imagem_resultado = imagem.copy()
 
-# Detecção de círculos usando Hough
-circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1.2, minDist=30,
-                           param1=100, param2=30, minRadius=10, maxRadius=100)
+# Converte para tons de cinza
+imagem_pb = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
 
-# Desenhar os círculos detectados
-if circles is not None:
-    circles = np.uint16(np.around(circles))
-    for i in circles[0, :]:
-        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+# Aplica a Transformada de Hough para detectar círculos
+detectados = cv2.HoughCircles(
+    imagem_pb,
+    cv2.HOUGH_GRADIENT,
+    dp=1.2,
+    minDist=80,
+    param1=100,
+    param2=50,
+    minRadius=40,
+    maxRadius=60
+)
 
-cv2.imwrite('resultado_circulos.jpg', img)
+# Se forem encontrados círculos, desenha-os
+if detectados is not None:
+    detectados = np.round(detectados[0, :]).astype("int")
+    for (cx, cy, raio) in detectados:
+        cv2.circle(imagem_resultado, (cx, cy), raio, (0, 255, 0), 4)
+        cv2.rectangle(imagem_resultado, (cx - 5, cy - 5), (cx + 5, cy + 5), (0, 128, 255), -1)
+
+# Mostra as imagens lado a lado
+plt.figure(figsize=(10, 5))
+
+# Original
+plt.subplot(1, 2, 1)
+plt.imshow(cv2.cvtColor(imagem, cv2.COLOR_BGR2RGB))
+plt.title("Original")
+plt.axis('off')
+
+# Resultado com círculos
+plt.subplot(1, 2, 2)
+plt.imshow(cv2.cvtColor(imagem_resultado, cv2.COLOR_BGR2RGB))
+total_circulos = len(detectados) if detectados is not None else 0
+plt.title(f"Detectados: {total_circulos}")
+plt.axis('off')
+
+plt.tight_layout()
+plt.show()
